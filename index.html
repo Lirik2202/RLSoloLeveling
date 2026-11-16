@@ -26,8 +26,6 @@
             background-image: radial-gradient(circle at 50% 0%, #161b33 0%, #07080f 70%);
         }
         h1, h2, .cyber-font { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
-        
-        /* Header & Hero Card */
         .hero-card {
             background: var(--card-bg);
             border: 1px solid rgba(0, 243, 255, 0.3);
@@ -56,8 +54,6 @@
             box-shadow: 0 0 10px var(--neon-cyan);
             transition: width 0.4s ease;
         }
-
-        /* Status / Debuff Banner */
         .status-box {
             margin-top: 12px; padding: 8px 12px; border-radius: 8px;
             font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;
@@ -68,8 +64,6 @@
             animation: pulseRed 2s infinite;
         }
         @keyframes pulseRed { 0% { box-shadow: 0 0 5px rgba(255,42,42,0.2); } 50% { box-shadow: 0 0 15px rgba(255,42,42,0.6); } 100% { box-shadow: 0 0 5px rgba(255,42,42,0.2); } }
-
-        /* Inputs & Buttons */
         .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
         input, textarea {
             background: #0d101d; border: 1px solid #283152; color: #fff;
@@ -87,8 +81,6 @@
         .btn-small { padding: 8px 12px; font-size: 13px; border-radius: 6px; }
         .btn-fail { background: transparent; border: 1px solid var(--neon-red); color: var(--neon-red); box-shadow: none; }
         .btn-hint { background: rgba(0, 243, 255, 0.1); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); box-shadow: none; }
-
-        /* Quest Cards */
         .section-title { font-size: 16px; color: var(--neon-cyan); margin: 16px 0 10px 0; text-transform: uppercase; }
         .quest-card {
             background: var(--card-bg); border-left: 4px solid var(--neon-cyan);
@@ -107,8 +99,6 @@
             margin-top: 10px; padding: 10px; background: #090c17; border: 1px dashed var(--neon-cyan);
             border-radius: 6px; font-size: 13px; color: #cbd5e1; line-height: 1.4; display: none;
         }
-
-        /* Tabs & Navigation */
         .screen { display: none; }
         .screen.active { display: block; }
         .nav-bar {
@@ -128,7 +118,6 @@
 </head>
 <body>
 
-    <!-- Hero Status Header -->
     <div class="hero-card">
         <div class="hero-header">
             <div class="user-name cyber-font" id="username">CYBER_RUNNER</div>
@@ -144,19 +133,16 @@
         </div>
     </div>
 
-    <!-- SCREEN 1: QUESTS -->
     <div id="screen-quests" class="screen active">
         <div id="penalty-section" style="display:none;">
             <div class="section-title" style="color: var(--neon-red);">⚠️ ШТРАФНОЙ ПРОТОКОЛ</div>
             <div id="penalty-list"></div>
         </div>
-
         <div class="section-title">🎯 АКТИВНЫЕ МИССИИ</div>
         <div id="loader" class="loader cyber-font">⏳ НЕЙРОСЕТЬ ОБРАБАТЫВАЕТ ДАННЫЕ...</div>
         <div id="quest-list"></div>
     </div>
 
-    <!-- SCREEN 2: NEW GOAL -->
     <div id="screen-goal" class="screen">
         <div class="section-title">🚀 НОВАЯ ГЛОБАЛЬНАЯ ЦЕЛЬ</div>
         <div class="input-group">
@@ -165,7 +151,6 @@
         </div>
     </div>
 
-    <!-- SCREEN 3: API SETTINGS -->
     <div id="screen-settings" class="screen">
         <div class="section-title">⚙️ ЯДРО ИИ (GEMINI API)</div>
         <div class="input-group">
@@ -176,7 +161,6 @@
         </div>
     </div>
 
-    <!-- Bottom Navigation -->
     <div class="nav-bar">
         <div class="nav-item active" id="nav-quests" onclick="switchTab('quests')"><span class="nav-icon">⚡</span>КВЕСТЫ</div>
         <div class="nav-item" id="nav-goal" onclick="switchTab('goal')"><span class="nav-icon">🎯</span>ЦЕЛЬ</div>
@@ -195,3 +179,224 @@
             quests: [],
             penalties: [],
             goal: ''
+        };
+
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+            document.getElementById('username').innerText = window.Telegram.WebApp.initDataUnsafe.user.first_name.toUpperCase();
+        };
+
+                document.getElementById('api-key-input').value = localStorage.getItem('gemini_api_key') || '';
+
+        function saveState() {
+            localStorage.setItem('cyberquest_state', JSON.stringify(state));
+            renderUI();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('screen-' + tab).classList.add('active');
+            document.getElementById('nav-' + tab).classList.add('active');
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (!key) {
+                alert('Поле пустое! Вставь API-ключ.');
+                return;
+            }
+            localStorage.setItem('gemini_api_key', key);
+            alert('API-ключ успешно сохранён в нейромодуле!');
+            switchTab('goal');
+        }
+
+        function renderUI() {
+            const xpNeeded = state.level * 500;
+            document.getElementById('lvl-display').innerText = `LVL ${state.level}`;
+            document.getElementById('xp-text').innerText = `${state.xp} / ${xpNeeded} XP`;
+            document.getElementById('xp-bar').style.width = `${Math.min(100, (state.xp / xpNeeded) * 100)}%`;
+
+            const banner = document.getElementById('status-banner');
+            if (state.debuff || state.penalties.length > 0) {
+                state.debuff = true;
+                banner.className = 'status-box status-debuff';
+                banner.innerHTML = '<span>⚠️ ДЕБАФФ: СБОЙ СИСТЕМЫ (-50% XP). ВЫПОЛНИ ШТРАФ!</span>';
+            } else {
+                banner.className = 'status-box status-normal';
+                banner.innerHTML = '<span>⚡ СТАТУС: В ПОТОКЕ (100% XP)</span>';
+            }
+
+            const penSec = document.getElementById('penalty-section');
+            const penList = document.getElementById('penalty-list');
+            penList.innerHTML = '';
+            if (state.penalties.length > 0) {
+                penSec.style.display = 'block';
+                state.penalties.forEach((p, idx) => {
+                    penList.innerHTML += `
+                        <div class="quest-card penalty">
+                            <div class="quest-top">
+                                <div class="quest-title">${p.title}</div>
+                                <div class="quest-xp">СНЯТИЕ ДЕБАФФА</div>
+                            </div>
+                            <div class="quest-desc">${p.desc}</div>
+                            <div class="quest-actions">
+                                <button type="button" class="btn btn-small btn-pink" onclick="completePenalty(${idx})">ОТРАБОТАТЬ</button>
+                            </div>
+                        </div>`;
+                });
+            } else {
+                penSec.style.display = 'none';
+            }
+
+            const qList = document.getElementById('quest-list');
+            qList.innerHTML = '';
+            if (state.quests.length === 0) {
+                qList.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Нет активных миссий. Перейди во вкладку «ЦЕЛЬ», чтобы сгенерировать план.</p>';
+            }
+            state.quests.forEach((q, idx) => {
+                const actualXp = state.debuff ? Math.floor(q.xp * 0.5) : q.xp;
+                qList.innerHTML += `
+                    <div class="quest-card ${q.done ? 'done' : ''}">
+                        <div class="quest-top">
+                            <div class="quest-title">${q.title}</div>
+                            <div class="quest-xp">+${actualXp} XP ${state.debuff ? '(50%)' : ''}</div>
+                        </div>
+                        <div class="quest-desc">${q.desc}</div>
+                        ${!q.done ? `
+                        <div class="quest-actions">
+                            <button type="button" class="btn btn-small" onclick="completeQuest(${idx})">ВЫПОЛНИТЬ</button>
+                            <button type="button" class="btn btn-small btn-hint" onclick="getHint(${idx})">💡 ПОДСКАЗКА ИИ</button>
+                            <button type="button" class="btn btn-small btn-fail" onclick="failQuest(${idx})">ПРОВАЛИТЬ</button>
+                        </div>
+                        <div class="hint-box" id="hint-${idx}">${q.hint || ''}</div>` : '<div style="color: var(--neon-green); font-size: 13px; font-weight: 700;">✔ МИССИЯ ЗАВЕРШЕНА</div>'}
+                    </div>`;
+                if (q.hint && !q.done) {
+                    setTimeout(() => {
+                        const hb = document.getElementById(`hint-${idx}`);
+                        if (hb) hb.style.display = 'block';
+                    }, 0);
+                }
+            });
+        }
+
+        function addXp(amount) {
+            state.xp += amount;
+            let xpNeeded = state.level * 500;
+            while (state.xp >= xpNeeded) {
+                state.xp -= xpNeeded;
+                state.level += 1;
+                xpNeeded = state.level * 500;
+                alert(`🎉 НОВЫЙ УРОВЕНЬ! Ты достиг LVL ${state.level}!`);
+            }
+        }
+
+        function completeQuest(idx) {
+            const q = state.quests[idx];
+            if (q.done) return;
+            q.done = true;
+            const gained = state.debuff ? Math.floor(q.xp * 0.5) : q.xp;
+            addXp(gained);
+            saveState();
+        }
+
+        function completePenalty(idx) {
+            state.penalties.splice(idx, 1);
+            if (state.penalties.length === 0) {
+                state.debuff = false;
+                alert('⚡ Дебафф снят! Синхронизация опыта восстановлена до 100%.');
+            }
+            saveState();
+        }
+
+        async function getHint(idx) {
+            const q = state.quests[idx];
+            const apiKey = localStorage.getItem('gemini_api_key');
+            const hintBox = document.getElementById(`hint-${idx}`);
+            if (!apiKey) return alert('Сначала вставь API-ключ во вкладке «СИСТЕМА»!');
+            hintBox.style.display = 'block';
+            hintBox.innerText = '⏳ Загружаю базу знаний ИИ...';
+            try {
+                const prompt = `Пользователь выполняет учебное задание: "${q.title}" (${q.desc}) в рамках цели: "${state.goal}". Дай краткую, понятную шпаргалку по теме (до 5 предложений) и 1 проверочный вопрос для самоконтроля.`;
+                const res = await fetch(`https://googleapis.com{apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                q.hint = data.candidates[0].content.parts[0].text;
+                saveState();
+            } catch (e) {
+                hintBox.innerText = 'Ошибка загрузки подсказки. Проверь ключ или интернет.';
+            }
+        }
+
+        async function failQuest(idx) {
+            const q = state.quests[idx];
+            state.debuff = true;
+            const apiKey = localStorage.getItem('gemini_api_key');
+            let penaltyTask = {
+                title: `Отработка: ${q.title}`,
+                desc: `Повтори материал из проваленного задания «${q.title}» и закрепи его на практике без ошибок.`
+            };
+            if (apiKey) {
+                document.getElementById('loader').style.display = 'block';
+                try {
+                    const prompt = `Пользователь провалил мини-задание: "${q.title}" (${q.desc}) в рамках цели: "${state.goal}". Придумай ОДНО конкретное штрафное задание на повторение и закрепление темы. Ответь строго в формате JSON без markdown: {"title": "название", "desc": "описание"}`;
+                    const res = await fetch(`https://googleapis.com{apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    const data = await res.json();
+                    const text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                    penaltyTask = JSON.parse(text);
+                } catch (e) { console.error(e); }
+                document.getElementById('loader').style.display = 'none';
+            }
+            state.penalties.push(penaltyTask);
+            saveState();
+        }
+
+        async function generateQuests() {
+            const goal = document.getElementById('goal-input').value.trim();
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) {
+                alert('Сначала вставь API-ключ во вкладке «СИСТЕМА»!');
+                switchTab('settings');
+                return;
+            }
+            if (!goal) return alert('Опиши свою цель!');
+            state.goal = goal;
+            switchTab('quests');
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const prompt = `Ты ИИ-наставник в киберпанк-игре. Пользователь хочет достичь цели: "${goal}". Разбей начало пути на 4 конкретных, посильных мини-квеста на сегодня/ближайшие дни (шаг за шагом от простого к сложному). Верни ответ СТРОГО в виде чистого JSON-массива без тегов markdown: [{"title": "Короткое название квеста", "desc": "Чёткая инструкция что сделать", "xp": 150}]`;
+                const res = await fetch(`https://googleapis.com{apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                const rawText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                const parsed = JSON.parse(rawText);
+                state.quests = parsed.map(item => ({ ...item, done: false, hint: '' }));
+                saveState();
+            } catch (e) {
+                alert('Ошибка генерации. Проверь правильность API-ключа или включи VPN, если сервисы Google ограничены в твоём регионе.');
+                console.error(e);
+            }
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        function resetProgress() {
+            if (confirm('Точно сбросить уровень, опыт и все задания?')) {
+                localStorage.removeItem('cyberquest_state');
+                location.reload();
+            }
+        }
+
+        renderUI();
+    </script>
+</body>
+</html>
+
