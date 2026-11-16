@@ -4,7 +4,11 @@ export default async function handler(req, res) {
     }
     try {
         const { prompt, apiKey } = req.body;
-        const response = await fetch(`https://googleapis.com{apiKey}`, {
+        const host = 'https://generativelanguage.' + 'googleapis.com';
+        const path = '/v1beta/models/gemini-2.5-flash:generateContent?key=';
+        const url = host + path + apiKey;
+
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
