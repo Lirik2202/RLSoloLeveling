@@ -183,10 +183,8 @@
 
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
             document.getElementById('username').innerText = window.Telegram.WebApp.initDataUnsafe.user.first_name.toUpperCase();
-        };
-
-                document.getElementById('api-key-input').value = localStorage.getItem('gemini_api_key') || '';
-
+        }
+        document.getElementById('api-key-input').value = localStorage.getItem('gemini_api_key') || '';
         function saveState() {
             localStorage.setItem('cyberquest_state', JSON.stringify(state));
             renderUI();
@@ -201,10 +199,7 @@
 
         function saveApiKey() {
             const key = document.getElementById('api-key-input').value.trim();
-            if (!key) {
-                alert('Поле пустое! Вставь API-ключ.');
-                return;
-            }
+            if (!key) return alert('Поле пустое! Вставь API-ключ.');
             localStorage.setItem('gemini_api_key', key);
             alert('API-ключ успешно сохранён в нейромодуле!');
             switchTab('goal');
@@ -317,16 +312,16 @@
             hintBox.innerText = '⏳ Загружаю базу знаний ИИ...';
             try {
                 const prompt = `Пользователь выполняет учебное задание: "${q.title}" (${q.desc}) в рамках цели: "${state.goal}". Дай краткую, понятную шпаргалку по теме (до 5 предложений) и 1 проверочный вопрос для самоконтроля.`;
-                const res = await fetch(`https://googleapis.com{apiKey}`, {
+                const res = await fetch('/api/gemini', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({ prompt, apiKey })
                 });
                 const data = await res.json();
                 q.hint = data.candidates[0].content.parts[0].text;
                 saveState();
             } catch (e) {
-                hintBox.innerText = 'Ошибка загрузки подсказки. Проверь ключ или интернет.';
+                hintBox.innerText = 'Ошибка загрузки подсказки. Проверь ключ или файл api/gemini.js.';
             }
         }
 
@@ -342,10 +337,10 @@
                 document.getElementById('loader').style.display = 'block';
                 try {
                     const prompt = `Пользователь провалил мини-задание: "${q.title}" (${q.desc}) в рамках цели: "${state.goal}". Придумай ОДНО конкретное штрафное задание на повторение и закрепление темы. Ответь строго в формате JSON без markdown: {"title": "название", "desc": "описание"}`;
-                    const res = await fetch(`https://googleapis.com{apiKey}`, {
+                    const res = await fetch('/api/gemini', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        body: JSON.stringify({ prompt, apiKey })
                     });
                     const data = await res.json();
                     const text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
@@ -371,18 +366,23 @@
             document.getElementById('loader').style.display = 'block';
             try {
                 const prompt = `Ты ИИ-наставник в киберпанк-игре. Пользователь хочет достичь цели: "${goal}". Разбей начало пути на 4 конкретных, посильных мини-квеста на сегодня/ближайшие дни (шаг за шагом от простого к сложному). Верни ответ СТРОГО в виде чистого JSON-массива без тегов markdown: [{"title": "Короткое название квеста", "desc": "Чёткая инструкция что сделать", "xp": 150}]`;
-                const res = await fetch(`https://googleapis.com{apiKey}`, {
+                const res = await fetch('/api/gemini', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({ prompt, apiKey })
                 });
                 const data = await res.json();
+                if (data.error) {
+                    alert('Ответ сервера: ' + JSON.stringify(data.error));
+                    document.getElementById('loader').style.display = 'none';
+                    return;
+                }
                 const rawText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
                 const parsed = JSON.parse(rawText);
                 state.quests = parsed.map(item => ({ ...item, done: false, hint: '' }));
                 saveState();
             } catch (e) {
-                alert('Ошибка генерации. Проверь правильность API-ключа или включи VPN, если сервисы Google ограничены в твоём регионе.');
+                alert('Ошибка связи с сервером. Убедись, что файл api/gemini.js создан на GitHub.');
                 console.error(e);
             }
             document.getElementById('loader').style.display = 'none';
@@ -399,4 +399,3 @@
     </script>
 </body>
 </html>
-
